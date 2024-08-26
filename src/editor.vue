@@ -86,12 +86,19 @@
         type: Object,
         required: false,
         default: () => ({})
+      },
+      imageUploader: {
+        type: Function,
+        default: null
       }
     },
     mounted() {
       this.initialize()
     },
     beforeDestroy() {
+      if (this.quill && this.quill.root) {
+        this.quill.root.removeEventListener('paste', this.handlePaste)
+      }
       this.quill = null
       delete this.quill
     },
@@ -99,7 +106,6 @@
       // Init Quill instance
       initialize() {
         if (this.$el) {
-
           // Options
           this._options = Object.assign({}, this.defaultOptions, this.globalOptions, this.options)
 
@@ -140,8 +146,83 @@
 
           // Emit ready event
           this.$emit('ready', this.quill)
+
+          // Add custom image handlers
+          this.addImageHandlers()
         }
-      }
+      },
+
+      addImageHandlers() {
+        if (this.imageUploader) {
+          // Override toolbar image button
+          this.quill.getModule('toolbar').addHandler('image', this.selectLocalImage)
+
+          // Add paste event listener
+          this.quill.root.addEventListener('paste', this.handlePaste)
+
+          // Add drop event listeners
+          this.quill.root.addEventListener('drop', this.handleDrop)
+          this.quill.root.addEventListener('dragover', this.preventDefault)
+          this.quill.root.addEventListener('dragenter', this.preventDefault)
+        }
+      },
+
+      selectLocalImage() {
+        const input = document.createElement('input')
+        input.setAttribute('type', 'file')
+        input.setAttribute('accept', 'image/*')
+        input.click()
+
+        input.onchange = () => {
+          const file = input.files[0]
+          if (file) {
+            this.uploadAndInsertImage(file)
+          }
+        }
+      },
+
+      handlePaste(event) {
+        const clipboardData = event.clipboardData
+        if (clipboardData && clipboardData.items) {
+          const items = clipboardData.items
+          for (let i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf('image') !== -1) {
+              event.preventDefault()
+              const file = items[i].getAsFile()
+              this.uploadAndInsertImage(file)
+              break
+            }
+          }
+        }
+      },
+
+      handleDrop(event) {
+        event.preventDefault()
+        if (event.dataTransfer && event.dataTransfer.files) {
+          const file = event.dataTransfer.files[0]
+          if (file && file.type.indexOf('image') !== -1) {
+            this.uploadAndInsertImage(file)
+          }
+        }
+      },
+
+      preventDefault(event) {
+        event.preventDefault()
+      },
+
+      async uploadAndInsertImage(file) {
+        if (this.imageUploader) {
+          try {
+            const url = await this.imageUploader(file)
+            const range = this.quill.getSelection(true)
+            this.quill.insertEmbed(range.index, 'image', url)
+          } catch (error) {
+            console.error('Image upload failed:', error)
+          }
+        }
+      },
+
+      // ... existing methods ...
     },
     watch: {
       // Watch content change

@@ -1,7 +1,7 @@
 {
   "name": "vue-quill-editor",
   "description": "Quill editor component for Vue",
-  "version": "3.0.6",
+  "version": "3.0.7",
   "license": "MIT",
   "author": "Surmon",
   "keywords": [

@@ -93,11 +93,9 @@
       }
     },
     mounted() {
-      console.log('Component mounted')
       this.initialize()
     },
     beforeDestroy() {
-      console.log('Component about to be destroyed')
       if (this.quill && this.quill.root) {
         this.quill.root.removeEventListener('paste', this.handlePaste)
       }
@@ -107,7 +105,6 @@
     methods: {
       // Init Quill instance
       initialize() {
-        console.log('Initializing Quill editor')
         if (this.$el) {
           // Options
           this._options = Object.assign({}, this.defaultOptions, this.globalOptions, this.options)
@@ -117,11 +114,8 @@
           
           this.quill.enable(false)
 
-          console.log('Quill instance created:', this.quill)
-
           // Set editor content
           if (this.value || this.content) {
-            console.log('Setting initial content:', this.value || this.content)
             this.quill.pasteHTML(this.value || this.content)
           }
 
@@ -141,7 +135,6 @@
 
           // Update model if text changes
           this.quill.on('text-change', (delta, oldDelta, source) => {
-            console.log('Text changed. Source:', source)
             let html = this.$refs.editor.children[0].innerHTML
             const quill = this.quill
             const text = this.quill.getText()
@@ -160,7 +153,6 @@
       },
 
       addImageHandlers() {
-        console.log('Adding image handlers')
         if (this.imageUploader) {
           // Override toolbar image button
           this.quill.getModule('toolbar').addHandler('image', this.selectLocalImage)
@@ -176,7 +168,6 @@
       },
 
       selectLocalImage() {
-        console.log('Local image selection triggered')
         const input = document.createElement('input')
         input.setAttribute('type', 'file')
         input.setAttribute('accept', 'image/*')
@@ -191,7 +182,6 @@
       },
 
       handlePaste(event) {
-        console.log('Paste event detected')
         const clipboardData = event.clipboardData
         if (clipboardData && clipboardData.items) {
           const items = clipboardData.items
@@ -207,7 +197,6 @@
       },
 
       handleDrop(event) {
-        console.log('Drop event detected')
         event.preventDefault()
         if (event.dataTransfer && event.dataTransfer.files) {
           const file = event.dataTransfer.files[0]
@@ -222,25 +211,28 @@
       },
 
       async uploadAndInsertImage(file) {
-        console.log('Uploading and inserting image:', file.name)
         if (this.imageUploader) {
           try {
             const url = await this.imageUploader(file)
-            console.log('Image uploaded successfully. URL:', url)
             const range = this.quill.getSelection(true)
             this.quill.insertEmbed(range.index, 'image', url)
           } catch (error) {
             console.error('Image upload failed:', error)
           }
+        } else {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            if (e.target?.result) {
+              const base64Image = e.target.result;
+              this.quill?.chain().focus().setImage({ src: base64Image }).run();
+            }
+          };
+          reader.readAsDataURL(file);
         }
       },
-
-      // ... existing methods ...
     },
     watch: {
-      // Watch content change
       content(newVal, oldVal) {
-        console.log('Content changed:', newVal)
         if (this.quill) {
           if (newVal && newVal !== this._content) {
             this._content = newVal
@@ -250,9 +242,7 @@
           }
         }
       },
-      // Watch content change
       value(newVal, oldVal) {
-        console.log('Value changed:', newVal)
         if (this.quill) {
           if (newVal && newVal !== this._content) {
             this._content = newVal
@@ -262,9 +252,7 @@
           }
         }
       },
-      // Watch disabled change
       disabled(newVal, oldVal) {
-        console.log('Disabled state changed:', newVal)
         if (this.quill) {
           this.quill.enable(!newVal)
         }
